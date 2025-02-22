@@ -13,8 +13,20 @@ SPULibC is a powerful iOS framework that provides dynamic runtime manipulation c
 
 ## Requirements
 
-- iOS 11.0+
+### System Requirements
+- iOS 11.0+ (target platform)
+- macOS 10.15+ (development environment)
 - Xcode 12.0+
+
+### Build Requirements
+- CMake 3.10 or higher
+- Apple LLVM/Clang compiler (included with Xcode)
+- iOS SDK (included with Xcode)
+
+### Development Environment Setup
+- Xcode Command Line Tools installed
+- Valid Apple Developer account (for code signing)
+- CocoaPods (optional, for dependency management)
 
 ## Installation
 
