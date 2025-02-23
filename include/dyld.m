@@ -196,6 +196,7 @@ vm_address_t remoteDlSym(task_t task, vm_address_t imageAddress, const char* sym
 {
 	__block vm_address_t outAddr = 0;
 
+	// First try normal symbol lookup
 	iterateSymbols(task, imageAddress, ^(const char* iterSymbolName, const char* type, vm_address_t value, BOOL* stop)
 	{
 		if(strcmp(type, "N_SECT") == 0)
@@ -203,9 +204,36 @@ vm_address_t remoteDlSym(task_t task, vm_address_t imageAddress, const char* sym
 			if(strcmp(iterSymbolName, symbolName) == 0)
 			{
 				outAddr = value;
+				*stop = YES;
 			}
 		}
 	});
+
+	// If symbol lookup failed, try scanning memory
+	if (outAddr == 0) {
+		__block vm_address_t slide;
+		__block BOOL firstSegmentCommand = YES;
+
+		iterateLoadCommands(task, imageAddress, ^(const struct load_command* cmd, vm_address_t cmdAddress, BOOL* stop)
+		{
+			if(cmd->cmd == LC_SEGMENT_64)
+			{
+				struct segment_command_64 segmentCommand;
+				task_read(task, cmdAddress, &segmentCommand, sizeof(segmentCommand));
+				if(firstSegmentCommand) {
+					slide = imageAddress - segmentCommand.vmaddr;
+					firstSegmentCommand = NO;
+				}
+				if (strncmp("__TEXT", segmentCommand.segname, 16) == 0) {
+					vm_address_t addrIfFound = scanTextSegmentForMemory(task, cmdAddress, &segmentCommand, slide, (char*)symbolName, strlen(symbolName), sizeof(void*));
+					if(addrIfFound != 0) {
+						outAddr = addrIfFound;
+						*stop = YES;
+					}
+				}
+			}
+		});
+	}
 
 	return outAddr;
 }
